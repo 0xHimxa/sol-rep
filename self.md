@@ -8,3 +8,6 @@ I really need to handle errors gracefully and the current revert that I allowed.
 
 
 need to write test for it , when i learned i completed ready rust ch13 i will comeback and change some stuff.
+
+
+need to add text explaining the issue and why it matters
