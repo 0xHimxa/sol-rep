@@ -83,6 +83,32 @@ const AUDIT_PATTERNS: &[&str] = &[
     // Timelock & Delays
     "timelock",            // Delayed execution
     "onlyAfter",           // Time-based restrictions
+
+
+
+    // Modern Access Control & Upgradeability
+    "_disableInitializers",   // Unprotected implementation contracts
+    "_grantRole",             // Privileged role assignment
+    "_setupRole",             // Internal/initial role setup
+    "Ownable2Step",           // Check if standard Ownable is used instead
+
+    // Advanced Low-Level & Token Vectors
+    "ecrecover",              // Signature malleability risks
+    "_safeMint",              // Reentrancy vector in NFT minting
+    "safeTransfer",           // Ensure SafeERC20 wrappers are utilized
+
+    // EVM Inline Assembly (Yul)
+    "sstore",                 // Raw storage writes (bypasses compiler safety)
+    "sload",                  // Raw storage reads
+    "extcodesize",            // Easily bypassed contract-check pattern
+
+    // DeFi & Oracle Vectors
+    "slot0",                  // Uniswap V3 manipulation risk (needs TWAP)
+    "flashLoan",              // Flash loan execution and repayment logic
+    
+    // Context & Environmental Variables
+    "_msgSender()",           // Meta-transactions (GSN/ERC2771) context
+    "block.coinbase",         // Miner/validator controlled environmental variable
 ];
 
 fn main() {
