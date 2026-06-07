@@ -1,3 +1,3 @@
-so far the code make sense it getting the job done. 
+So far, the code makes sense and is getting the job done.
 
-i really need to handle  error grase fully and the current revert that i allwoed
+I really need to handle errors gracefully and the current revert that I allowed.
