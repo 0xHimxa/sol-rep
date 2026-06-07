@@ -5,12 +5,84 @@ use std::{
 
 /// Solidity source patterns that commonly deserve manual security review.
 const AUDIT_PATTERNS: &[&str] = &[
+    // 
     "tx.origin",
     "delegatecall",
     ".call",
     "selfdestruct",
     "assembly",
     "unchecked",
+    
+    // Access Control & Authorization
+    "onlyOwner",           // Centralization risks
+    "onlyRole",            // Role-based access control
+    "initializer",         // Initialization vulnerabilities
+    "initialize(",         // Unprotected initializers
+    "constructor()",       // Missing constructors in upgradeable contracts
+    
+    // Arithmetic & Math
+    "block.timestamp",     // Timestamp dependence
+    "block.number",        // Block number dependence
+    "blockhash",           // Blockhash predictability
+    "now",                 // Deprecated alias for block.timestamp
+    
+    // Reentrancy & Call Risks
+    ".send(",              // Gas stipend issues (2300 gas)
+    ".transfer(",          // Gas stipend issues, breaks with gas changes
+    ".gas(" ,              // Manual gas setting in calls
+    ".value(",             // ETH value transfers
+    
+    // Low-level & Dangerous Patterns
+    "callcode",            // Deprecated, similar to delegatecall
+    "staticcall",          // Low-level call variants
+    "address(",            // Address casting that might fail
+    "create2",             // Contract creation with predictable addresses
+    
+    // Visibility & Type Issues
+    "public ",             // Public state variables (review for sensitive data)
+    "external",            // External functions without access control
+    "payable",             // Payable functions (ETH reception risks)
+    "private ",            // Private variables (still visible on-chain)
+    
+    // Logic & Validation
+    "require(",            // Check validation completeness
+    "assert(",             // Invariant checks (may consume all gas)            // Error handling patterns
+    "delete ",             // Storage deletion patterns
+    
+    // Upgradeability Patterns
+    "upgradeTo(",          // Upgrade risks
+    "proxiable",           // Proxy patterns
+    "implementation(",     // Implementation address exposure
+    
+    // ERC Specific
+    "approve(",            // Approval race conditions
+    "transferFrom(",       // Allowance risks
+    "mint(",               // Unrestricted minting
+    "burn(",               // Burning logic
+    "_burn(",              // Internal burn
+    
+    // Oracle & External Data
+    "oracle",              // Oracle manipulation
+    "price",               // Price feed risks
+    "getReserves",         // DEX reserve manipulation
+    
+    // Gas & Economics
+    "gasleft()",           // Gas manipulation
+    "tx.gasprice",         // Gas price dependence
+    "block.gaslimit",      // Gas limit dependence
+    
+    // Randomness & Privacy
+    "keccak256",           // Used for randomness (bad practice)
+    "abi.encodePacked",    // Hash collision risks
+    "bytes.concat",        // Similar risks to encodePacked
+    
+    // Withdrawal Patterns
+    ".withdraw(",          // Withdrawal function without reentrancy guard
+    "withdraw(",           // Alternative withdrawal pattern
+    
+    // Timelock & Delays
+    "timelock",            // Delayed execution
+    "onlyAfter",           // Time-based restrictions
 ];
 
 fn main() {
