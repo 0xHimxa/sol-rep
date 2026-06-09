@@ -1,11 +1,6 @@
-use std::{ env};
+use std::env;
 
 use sol_grep::{InputParsed, full_content_readed};
-
-
-
-
-
 
 fn main() {
     let user_input: Vec<String> = env::args().collect();
@@ -19,6 +14,5 @@ fn main() {
         }
     };
 
- full_content_readed(parsed_input);
+    full_content_readed(parsed_input);
 }
-
