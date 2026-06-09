@@ -111,10 +111,78 @@ const AUDIT_PATTERNS: &[&str] = &[
     "block.coinbase",         // Miner/validator controlled environmental variable
 ];
 
+
+
+
+/// CLI configuration provided by the user.
+struct Config<'a> {
+    /// Directory that should be searched for Solidity files.
+    file_path: &'a str,
+}
+
+/// Parsed command-line input used by the scanner.
+struct InputParsed<'a> {
+    /// Filesystem settings for the current run.
+    file_config: Config<'a>,
+    /// Enables pattern matching for security-sensitive Solidity constructs.
+    mode: bool,
+}
+/// Solidity file content paired with its original path.
+struct ContentPath<'a> {
+    /// Full source text loaded from disk.
+    content: String,
+    /// Path to the source file the content came from.
+    path: &'a PathBuf,
+}
+
+
+
+
+
+
+
+impl<'a> InputParsed<'a>{
+/// Parses command-line arguments into the scanner configuration.
+///
+/// The first positional argument is treated as the folder to scan. Passing
+/// `--audit-mode` enables pattern checks; otherwise the scanner only lists
+/// discovered Solidity files.
+
+    fn new(param: &'a [String]) -> Result<InputParsed<'a>, &'static str> {
+           if param.len() < 2 {
+        return Err("Not enough parameters");
+    }
+
+    let file_path = match param.get(1) {
+        Some(path) => path,
+        None => return Err("missing file path"),
+    };
+    let audit_mode = param.iter().any(|arg| arg == "--audit-mode");
+
+    let config = Config { file_path };
+
+    let parsed = InputParsed {
+        file_config: config,
+        mode: audit_mode,
+    };
+
+    Ok(parsed)
+    }
+
+
+
+
+
+
+}
+
+
+
+
 fn main() {
     let user_input: Vec<String> = env::args().collect();
 
-    let parsed_input = match input_config(&user_input) {
+    let parsed_input: InputParsed<'_> = match InputParsed::new(&user_input) {
         Ok(config) => config,
 
         Err(e) => {
@@ -165,53 +233,16 @@ fn read_folder(folder_path: &Path) -> Result<Vec<PathBuf>, io::Error> {
     Ok(paths)
 }
 
-/// CLI configuration provided by the user.
-struct Config<'a> {
-    /// Directory that should be searched for Solidity files.
-    file_path: &'a str,
-}
 
-/// Parsed command-line input used by the scanner.
-struct InputParsed<'a> {
-    /// Filesystem settings for the current run.
-    file_config: Config<'a>,
-    /// Enables pattern matching for security-sensitive Solidity constructs.
-    mode: bool,
-}
 
-/// Solidity file content paired with its original path.
-struct ContentPath<'a> {
-    /// Full source text loaded from disk.
-    content: String,
-    /// Path to the source file the content came from.
-    path: &'a PathBuf,
-}
 
-/// Parses command-line arguments into the scanner configuration.
-///
-/// The first positional argument is treated as the folder to scan. Passing
-/// `--audit-mode` enables pattern checks; otherwise the scanner only lists
-/// discovered Solidity files.
-fn input_config<'a>(param: &'a [String]) -> Result<InputParsed<'a>, &'static str> {
-    if param.len() < 2 {
-        return Err("Not enough parameters");
-    }
 
-    let file_path = match param.get(1) {
-        Some(path) => path,
-        None => return Err("missing file path"),
-    };
-    let audit_mode = param.iter().any(|arg| arg == "--audit-mode");
 
-    let config = Config { file_path };
 
-    let parsed = InputParsed {
-        file_config: config,
-        mode: audit_mode,
-    };
 
-    Ok(parsed)
-}
+
+
+
 
 /// Reads each discovered Solidity file into memory.
 ///
