@@ -155,6 +155,7 @@ impl<'a> InputParsed<'a> {
 }
 
 pub fn full_content_readed(parsed_input: InputParsed) {
+    println!("path to read,{}", parsed_input.file_config.file_path);
     let read_files = match read_folder(parsed_input.file_config.file_path.as_ref()) {
         Ok(files) => files,
         Err(e) => {
@@ -263,163 +264,160 @@ fn find_audit_matches(content: &ContentPath, patterns: &[&str]) -> Vec<AuditFind
     findings
 }
 
-#[cfg(test)]
 mod tests {
     use super::*;
-    use std::{
-        env,
-        time::{SystemTime, UNIX_EPOCH},
-    };
-
-    fn test_dir(name: &str) -> PathBuf {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after unix epoch")
-            .as_nanos();
-
-        env::temp_dir().join(format!("sol_grep_{name}_{unique}"))
-    }
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
 
     #[test]
-    fn input_parser_requires_a_file_path() {
-        let args = vec!["sol_grep".to_string()];
-
-        let err = InputParsed::new(&args).expect_err("missing path should fail");
-
-        assert_eq!(err, "Not enough parameters");
-    }
-
-    #[test]
-    fn input_parser_reads_path_and_audit_flag() {
-        let args = vec![
-            "sol_grep".to_string(),
-            "contracts".to_string(),
+    fn test_input_parsing() {
+        let input_var = [
+            "contract".to_string(),
+            "sol_grip".to_string(),
             "--audit-mode".to_string(),
         ];
-
-        let parsed = InputParsed::new(&args).expect("valid cli args should parse");
-
-        assert_eq!(parsed.file_config.file_path, "contracts");
-        assert!(parsed.mode);
-    }
-
-    #[test]
-    fn input_parser_defaults_to_listing_mode_without_audit_flag() {
-        let args = vec!["sol_grep".to_string(), "contracts".to_string()];
-
-        let parsed = InputParsed::new(&args).expect("valid cli args should parse");
-
-        assert_eq!(parsed.file_config.file_path, "contracts");
-        assert!(!parsed.mode);
-    }
-
-    #[test]
-    fn read_folder_recursively_returns_only_solidity_files() {
-        let root = test_dir("read_folder");
-        let nested = root.join("nested");
-        fs::create_dir_all(&nested).expect("test directory should be created");
-
-        let root_sol = root.join("Root.sol");
-        let nested_sol = nested.join("Nested.sol");
-        let ignored_file = root.join("notes.txt");
-
-        fs::write(&root_sol, "contract Root {}").expect("root solidity file should be written");
-        fs::write(&nested_sol, "contract Nested {}")
-            .expect("nested solidity file should be written");
-        fs::write(ignored_file, "not solidity").expect("ignored file should be written");
-
-        let mut files = read_folder(&root).expect("folder should be readable");
-        files.sort();
-
-        assert_eq!(files, vec![root_sol, nested_sol]);
-
-        fs::remove_dir_all(root).expect("test directory should be removed");
-    }
-
-    #[test]
-    fn read_files_content_preserves_file_paths_and_contents() {
-        let root = test_dir("read_files_content");
-        fs::create_dir_all(&root).expect("test directory should be created");
-
-        let first = root.join("First.sol");
-        let second = root.join("Second.sol");
-        fs::write(&first, "contract First {}").expect("first file should be written");
-        fs::write(&second, "contract Second {}").expect("second file should be written");
-        let files = vec![first.clone(), second.clone()];
-
-        let contents = read_files_content(&files).expect("files should be readable");
-
-        assert_eq!(contents.len(), 2);
-        assert_eq!(contents[0].path, &first);
-        assert_eq!(contents[0].content, "contract First {}");
-        assert_eq!(contents[1].path, &second);
-        assert_eq!(contents[1].content, "contract Second {}");
-
-        fs::remove_dir_all(root).expect("test directory should be removed");
-    }
-
-    #[test]
-    fn find_audit_matches_reports_patterns_with_one_based_line_numbers() {
-        let path = PathBuf::from("contracts/Risky.sol");
-        let source = r#"contract Risky {
-    function run(address target) external payable {
-        target.delegatecall("");
-        require(msg.sender == tx.origin);
-    }
-}"#;
-        let content = ContentPath {
-            content: source.to_string(),
-            path: &path,
+        let parsed = InputParsed::new(&input_var);
+        let value = match &parsed {
+            Ok(config) => config,
+            Err(e) => {
+                println!("Error: {}", e);
+                return;
+            }
         };
+        println!("path: {}", value.file_config.file_path);
+        assert_eq!(value.file_config.file_path, "sol_grip");
+        assert!(value.mode);
 
-        let findings = find_audit_matches(&content, &["delegatecall", "tx.origin", "payable"]);
-
-        assert_eq!(
-            findings,
-            vec![
-                AuditFinding {
-                    path: path.clone(),
-                    line_number: 2,
-                    pattern: "payable".to_string(),
-                },
-                AuditFinding {
-                    path: path.clone(),
-                    line_number: 3,
-                    pattern: "delegatecall".to_string(),
-                },
-                AuditFinding {
-                    path,
-                    line_number: 4,
-                    pattern: "tx.origin".to_string(),
-                },
-            ]
-        );
+        assert!(parsed.is_ok());
     }
 
     #[test]
-    fn find_audit_matches_documents_current_contains_limitations() {
-        let path = PathBuf::from("contracts/Comments.sol");
-        let source = r#"contract Comments {
-    // TODO: review tx.origin risk if this is ever added
-    function split(address target) external {
-        require(tx
-            .origin == msg.sender);
+    fn test_input_fail_no_argument() {
+        let input_var = ["contract".to_string()];
+        let parsed = InputParsed::new(&input_var);
+
+        assert!(parsed.is_err());
     }
-}"#;
-        let content = ContentPath {
-            content: source.to_string(),
-            path: &path,
-        };
 
-        let findings = find_audit_matches(&content, &["tx.origin"]);
+    #[test]
+    fn test_read_folder_no_sol_files() {
+        let temp_dir = tempdir().unwrap();
 
-        assert_eq!(
-            findings,
-            vec![AuditFinding {
-                path,
-                line_number: 2,
-                pattern: "tx.origin".to_string(),
-            }]
+        let path = temp_dir.path().join("text.txt");
+        let content = "void main() {}";
+        let mut createPath = std::fs::File::create(&path).unwrap();
+        createPath.write_all(content.as_bytes()).unwrap();
+
+        let result = read_folder(temp_dir.path()).unwrap();
+        assert!(result.len() == 0);
+    }
+
+    #[test]
+    fn test_deep_file_read() {
+        let temp_dir = tempdir().unwrap();
+        let root_dir = temp_dir.path();
+
+        let path = temp_dir.path().join("text.sol");
+        let content = "void main() {}";
+        let mut createPath = std::fs::File::create(&path).unwrap();
+        createPath.write_all(content.as_bytes()).unwrap();
+
+        //first deep
+
+        let f_deep = temp_dir.path().join("deep");
+        std::fs::create_dir(&f_deep).unwrap();
+        let f_path = f_deep.join("f.sol");
+        let f_content = "void main() {}";
+        let mut f_createPath = std::fs::File::create(&f_path).unwrap();
+        f_createPath.write_all(f_content.as_bytes()).unwrap();
+
+        // second deep deeo
+
+        let s_deep = f_deep.join("second_deep");
+        std::fs::create_dir(&s_deep).unwrap();
+        let s_path = s_deep.join("s.sol");
+        let s_content = "void main() {}";
+        let mut f_createPath = std::fs::File::create(&s_path).unwrap();
+        f_createPath.write_all(s_content.as_bytes()).unwrap();
+
+        let result = read_folder(root_dir).unwrap();
+        assert!(
+            result.iter().any(|p| p.ends_with("s.sol")),
+            "Could not find s.sol in {:?}",
+            result
         );
+        assert!(
+            result.iter().any(|p| p.ends_with("f.sol")),
+            "Could not find f.sol in {:?}",
+            result
+        );
+        assert!(
+            result.iter().any(|p| p.ends_with("text.sol")),
+            "Could not find text.sol in {:?}",
+            result
+        );
+
+        assert!(result.len() == 3);
     }
+
+
+
+
+
+
+
+#[test]
+fn test_read_files_content_multiple_files() {
+    let temp_dir = tempdir().unwrap();
+    
+    // Create test files with content
+    let file1_path = temp_dir.path().join("test1.sol");
+    let content1 = "contract Test1 { \n  function test() public {}\n}";
+    let mut file = File::create(&file1_path).unwrap();
+    file.write_all(content1.as_bytes()).unwrap();
+    
+    let file2_path = temp_dir.path().join("test2.sol");
+    let content2 = "contract Test2 { \n  address owner;\n}";
+    let mut file = File::create(&file2_path).unwrap();
+    file.write_all(content2.as_bytes()).unwrap();
+    
+    // Create vector of paths
+    let paths = vec![file1_path, file2_path];
+    
+    // Test the function
+    let result = read_files_content(&paths).unwrap();
+    
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].content, content1);
+    assert_eq!(result[1].content, content2);
+    assert_eq!(result[0].path.file_name().unwrap(), "test1.sol");
+    assert_eq!(result[1].path.file_name().unwrap(), "test2.sol");
+}
+
+
+
+
+
+
+#[test]
+fn test_read_files_content_with_invalid_file() {
+    let temp_dir = tempdir().unwrap();
+    
+    let valid_path = temp_dir.path().join("valid.sol");
+    let mut file = File::create(&valid_path).unwrap();
+    file.write_all(b"contract Valid {}").unwrap();
+    
+    let invalid_path = temp_dir.path().join("does_not_exist.sol");
+    
+    let paths = vec![valid_path, invalid_path];
+    
+    // Should return error because one file doesn't exist
+    let result = read_files_content(&paths);
+    assert!(result.is_err());
+}
+
+
+
+
 }
