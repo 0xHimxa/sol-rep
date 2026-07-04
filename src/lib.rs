@@ -159,7 +159,7 @@ pub fn full_content_readed(parsed_input: InputParsed) {
     let read_files = match read_folder(parsed_input.file_config.file_path.as_ref()) {
         Ok(files) => files,
         Err(e) => {
-            println!("Error: {}", e);
+            eprintln!("Error: {}", e);
             return;
         }
     };
@@ -167,7 +167,7 @@ pub fn full_content_readed(parsed_input: InputParsed) {
     let content_in_files = match read_files_content(&read_files) {
         Ok(content) => content,
         Err(e) => {
-            println!("Error: {}", e);
+            eprintln!("Error: {}", e);
             return;
         }
     };

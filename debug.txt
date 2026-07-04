@@ -1,0 +1,5 @@
+path to read,soli
+soli/t.sol
+soli/test/t.sol
+soli/t.sol
+soli/test/t.sol

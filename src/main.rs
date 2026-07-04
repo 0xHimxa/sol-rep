@@ -9,7 +9,7 @@ fn main() {
         Ok(config) => config,
 
         Err(e) => {
-            println!("Error: {}", e);
+            eprintln!("Error: {}", e);
             return;
         }
     };
